@@ -1,7 +1,10 @@
+mod ast;
 mod lexer;
+mod parser; // Add this line
 mod token;
 
 use lexer::Lexer;
+use parser::Parser; // Add this line
 use std::env;
 use std::fs;
 use std::process;
@@ -23,14 +26,29 @@ fn main() {
         }
     };
 
+    println!("=== SOURCE ===");
+    println!("{}", source);
+
+    // Tokenize
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.tokenize();
 
-    println!("=== TOKENS ===");
+    println!("\n=== TOKENS ===");
     for (i, token) in tokens.iter().enumerate() {
         println!("{}: {:?}", i, token);
     }
 
-    println!("\n=== SUMMARY ===");
-    println!("Total tokens: {}", tokens.len());
+    // Parse
+    let mut parser = Parser::new(tokens);
+    match parser.parse() {
+        Ok(program) => {
+            println!("\n=== AST ===");
+            println!("{:#?}", program);
+        }
+        Err(err) => {
+            eprintln!("\n=== PARSE ERROR ===");
+            eprintln!("{}", err.message);
+            process::exit(1);
+        }
+    }
 }
