@@ -1,12 +1,14 @@
 mod ast;
 mod circuit;
 mod lexer;
+mod optimizer;
 mod parser;
 mod ssa;
 mod token;
 
 use circuit::CircuitBuilder;
 use lexer::Lexer;
+use optimizer::ConstantFolder;
 use parser::Parser;
 use ssa::SsaBuilder;
 use std::env;
@@ -64,11 +66,33 @@ fn main() {
     }
     println!("return {}", ssa_program.return_value);
 
-    let circuit = CircuitBuilder::from_ssa(ssa_program);
+    let circuit_before = CircuitBuilder::from_ssa(ssa_program.clone());
 
-    println!("\n=== CIRCUIT ===");
-    for (i, gate) in circuit.gates.iter().enumerate() {
+    println!("\n=== CIRCUIT (BEFORE OPTIMIZATION) ===");
+    for (i, gate) in circuit_before.gates.iter().enumerate() {
         println!("{}: {}", i, gate);
     }
-    println!("output: {}", circuit.output_wire);
+    println!("output: {}", circuit_before.output_wire);
+    println!("Total gates: {}", circuit_before.gates.len());
+
+    let optimized_ssa = ConstantFolder::optimize(ssa_program);
+
+    println!("\n=== OPTIMIZED SSA ===");
+    for (i, instr) in optimized_ssa.instructions.iter().enumerate() {
+        println!("{}: {}", i, instr);
+    }
+    println!("return {}", optimized_ssa.return_value);
+
+    let circuit_after = CircuitBuilder::from_ssa(optimized_ssa);
+
+    println!("\n=== CIRCUIT (AFTER OPTIMIZATION) ===");
+    for (i, gate) in circuit_after.gates.iter().enumerate() {
+        println!("{}: {}", i, gate);
+    }
+    println!("output: {}", circuit_after.output_wire);
+    println!("Total gates: {}", circuit_after.gates.len());
+
+    println!("\n=== OPTIMIZATION IMPACT ===");
+    println!("Gates before: {}", circuit_before.gates.len());
+    println!("Gates after: {}", circuit_after.gates.len());
 }
