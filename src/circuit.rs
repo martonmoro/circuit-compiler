@@ -27,6 +27,8 @@ pub enum Gate {
 
 #[derive(Debug, Clone)]
 pub struct Circuit {
+    pub public_inputs: Vec<(String, Wire)>,
+    pub private_inputs: Vec<(String, Wire)>,
     pub gates: Vec<Gate>,
     pub output_wire: Wire,
 }
@@ -35,19 +37,34 @@ pub struct CircuitBuilder {
     gates: Vec<Gate>,
     wire_counter: usize,
     ssa_to_wire: HashMap<SsaValue, Wire>,
+    public_inputs: Vec<(String, Wire)>,
+    private_inputs: Vec<(String, Wire)>,
 }
-
 impl CircuitBuilder {
     pub fn new() -> Self {
         Self {
             gates: Vec::new(),
             wire_counter: 0,
             ssa_to_wire: HashMap::new(),
+            public_inputs: Vec::new(),
+            private_inputs: Vec::new(),
         }
     }
 
     pub fn from_ssa(ssa_program: SsaProgram) -> Circuit {
         let mut builder = CircuitBuilder::new();
+
+        for input in &ssa_program.public_inputs {
+            let wire = builder.get_or_create_wire(input);
+            let name = input.name.clone();
+            builder.public_inputs.push((name, wire));
+        }
+
+        for input in &ssa_program.private_inputs {
+            let wire = builder.get_or_create_wire(input);
+            let name = input.name.clone();
+            builder.private_inputs.push((name, wire));
+        }
 
         for instr in &ssa_program.instructions {
             builder.convert_instruction(instr);
@@ -56,6 +73,8 @@ impl CircuitBuilder {
         let output_wire = builder.get_or_create_wire(&ssa_program.return_value);
 
         Circuit {
+            public_inputs: builder.public_inputs,
+            private_inputs: builder.private_inputs,
             gates: builder.gates,
             output_wire,
         }

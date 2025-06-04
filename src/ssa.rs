@@ -6,6 +6,8 @@ use std::collections::HashMap;
 pub struct SsaProgram {
     pub instructions: Vec<SsaInstruction>,
     pub return_value: SsaValue,
+    pub public_inputs: Vec<SsaValue>,
+    pub private_inputs: Vec<SsaValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +27,8 @@ pub struct SsaBuilder {
     instructions: Vec<SsaInstruction>,
     var_versions: HashMap<String, usize>,
     temp_counter: usize,
+    public_inputs: Vec<SsaValue>,
+    private_inputs: Vec<SsaValue>,
 }
 
 impl SsaBuilder {
@@ -33,6 +37,8 @@ impl SsaBuilder {
             instructions: Vec::new(),
             var_versions: HashMap::new(),
             temp_counter: 0,
+            public_inputs: Vec::new(),
+            private_inputs: Vec::new(),
         }
     }
 
@@ -41,6 +47,35 @@ impl SsaBuilder {
 
         for stmt in program.statements {
             match stmt {
+                Stmt::PublicInput { name } => {
+                    let version = self.next_variable_version(&name);
+                    let input_ssa = SsaValue { name, version };
+                    self.public_inputs.push(input_ssa);
+                }
+                Stmt::PrivateInput { name } => {
+                    let version = self.next_variable_version(&name);
+                    let input_ssa = SsaValue { name, version };
+                    self.private_inputs.push(input_ssa);
+                }
+                Stmt::ConstDecl { name, value } => {
+                    let temp = self.new_temp();
+                    self.instructions
+                        .push(SsaInstruction::Const(temp.clone(), value));
+
+                    let version = self.next_variable_version(&name);
+                    let var_ssa = SsaValue {
+                        name: name.clone(),
+                        version,
+                    };
+
+                    if let Some(last_instr) = self.instructions.pop() {
+                        let new_instr = match last_instr {
+                            SsaInstruction::Const(_, val) => SsaInstruction::Const(var_ssa, val),
+                            _ => unreachable!(),
+                        };
+                        self.instructions.push(new_instr);
+                    }
+                }
                 Stmt::Let { name, expr } => {
                     let _expr_result = self.convert_expr(expr);
 
@@ -75,6 +110,8 @@ impl SsaBuilder {
         SsaProgram {
             instructions: self.instructions,
             return_value: return_value.expect("Program must have a return statement"),
+            public_inputs: self.public_inputs,
+            private_inputs: self.private_inputs,
         }
     }
 

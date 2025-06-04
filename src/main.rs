@@ -69,6 +69,8 @@ fn main() {
     let circuit_before = CircuitBuilder::from_ssa(ssa_program.clone());
 
     println!("\n=== CIRCUIT (BEFORE OPTIMIZATION) ===");
+    println!("Public inputs: {:?}", circuit_before.public_inputs);
+    println!("Private inputs: {:?}", circuit_before.private_inputs);
     for (i, gate) in circuit_before.gates.iter().enumerate() {
         println!("{}: {}", i, gate);
     }
@@ -86,6 +88,8 @@ fn main() {
     let circuit_after = CircuitBuilder::from_ssa(optimized_ssa);
 
     println!("\n=== CIRCUIT (AFTER OPTIMIZATION) ===");
+    println!("Public inputs: {:?}", circuit_after.public_inputs);
+    println!("Private inputs: {:?}", circuit_after.private_inputs);
     for (i, gate) in circuit_after.gates.iter().enumerate() {
         println!("{}: {}", i, gate);
     }

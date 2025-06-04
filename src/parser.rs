@@ -1,6 +1,10 @@
 /*
 program = statement*
-statement = "let" IDENT "=" expr | "return" expr
+statement = "public" IDENT
+          | "private" IDENT
+          | "const" IDENT "=" NUMBER
+          | "let" IDENT "=" expr
+          | "return" expr
 expr = term ("+" term | "*" term)*
 term = IDENT | NUMBER | "(" expr ")"
 */
@@ -32,32 +36,52 @@ impl Parser {
 }
 
 impl Parser {
-    // statement = "let" IDENT "=" expr | "return" expr
+    // statement = "public" IDENT
+    //       | "private" IDENT
+    //       | "const" IDENT "=" NUMBER
+    //       | "let" IDENT "=" expr
+    //       | "return" expr
     fn parse_statement(&mut self) -> Result<Stmt, ParseError> {
         match self.peek() {
+            TokenType::Public => self.parse_public_stmt(),
+            TokenType::Private => self.parse_private_stmt(),
+            TokenType::Const => self.parse_const_stmt(),
             TokenType::Let => self.parse_let_stmt(),
             TokenType::Return => self.parse_return_stmt(),
             _ => Err(ParseError {
-                message: format!("Expected let or return, found {:?}", self.peek()),
+                message: format!("Expected statement, found {:?}", self.peek()),
             }),
         }
+    }
+
+    // "public" IDENT
+    fn parse_public_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::Public)?;
+        let name = self.expect_identifier()?;
+        Ok(Stmt::PublicInput { name })
+    }
+
+    // "private" IDENT
+    fn parse_private_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::Private)?;
+        let name = self.expect_identifier()?;
+        Ok(Stmt::PrivateInput { name })
+    }
+
+    // "const" IDENT "=" NUMBER
+    fn parse_const_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::Const)?;
+        let name = self.expect_identifier()?;
+        self.consume(TokenType::Equals)?;
+        let value = self.expect_number()?;
+        Ok(Stmt::ConstDecl { name, value })
     }
 
     // "let" IDENT "=" expr
     fn parse_let_stmt(&mut self) -> Result<Stmt, ParseError> {
         self.consume(TokenType::Let)?;
-
-        let name = match self.advance()?.token_type {
-            TokenType::Identifier(name) => name,
-            _ => {
-                return Err(ParseError {
-                    message: "Expected identifier after 'let'".to_string(),
-                })
-            }
-        };
-
+        let name = self.expect_identifier()?;
         self.consume(TokenType::Equals)?;
-
         let expr = self.parse_expr()?;
         Ok(Stmt::Let { name, expr })
     }
@@ -65,7 +89,6 @@ impl Parser {
     // "return" expr
     fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
         self.consume(TokenType::Return)?;
-
         let expr = self.parse_expr()?;
         Ok(Stmt::Return(expr))
     }
@@ -140,6 +163,24 @@ impl Parser {
             Err(ParseError {
                 message: format!("Expected {:?}, found {:?}", expected, self.peek()),
             })
+        }
+    }
+
+    fn expect_identifier(&mut self) -> Result<String, ParseError> {
+        match self.advance()?.token_type {
+            TokenType::Identifier(name) => Ok(name),
+            other => Err(ParseError {
+                message: format!("Expected identifier, found {:?}", other),
+            }),
+        }
+    }
+
+    fn expect_number(&mut self) -> Result<i32, ParseError> {
+        match self.advance()?.token_type {
+            TokenType::Number(n) => Ok(n),
+            other => Err(ParseError {
+                message: format!("Expected number, found {:?}", other),
+            }),
         }
     }
 }

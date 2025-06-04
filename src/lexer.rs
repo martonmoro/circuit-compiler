@@ -88,6 +88,9 @@ impl Lexer {
                 match ident.as_str() {
                     "let" => TokenType::Let,
                     "return" => TokenType::Return,
+                    "public" => TokenType::Public,
+                    "private" => TokenType::Private,
+                    "const" => TokenType::Const,
                     _ => TokenType::Identifier(ident),
                 }
             }

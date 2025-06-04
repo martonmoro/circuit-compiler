@@ -24,6 +24,8 @@ impl ConstantFolder {
         SsaProgram {
             instructions: optimized_instructions,
             return_value: ssa_program.return_value,
+            public_inputs: ssa_program.public_inputs, // pass through
+            private_inputs: ssa_program.private_inputs, // pass through
         }
     }
 }

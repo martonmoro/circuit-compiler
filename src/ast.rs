@@ -5,6 +5,9 @@ pub struct Program {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+    PublicInput { name: String },
+    PrivateInput { name: String },
+    ConstDecl { name: String, value: i32 },
     Let { name: String, expr: Expr },
     Return(Expr),
 }

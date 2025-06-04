@@ -1,0 +1,4 @@
+public x
+private secret
+let result = x * secret
+return result

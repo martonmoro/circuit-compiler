@@ -3,6 +3,10 @@ pub enum TokenType {
     Let,
     Return,
 
+    Public,
+    Private,
+    Const,
+
     Star,
     Plus,
     Equals,
