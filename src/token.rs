@@ -18,5 +18,5 @@ pub enum TokenType {
 #[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    pub span: (usize, usize), // for error messages
+    pub span: (usize, usize), // TODO: for error messages
 }

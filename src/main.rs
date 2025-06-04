@@ -1,10 +1,12 @@
 mod ast;
 mod lexer;
-mod parser; // Add this line
+mod parser;
+mod ssa;
 mod token;
 
 use lexer::Lexer;
-use parser::Parser; // Add this line
+use parser::Parser;
+use ssa::SsaBuilder;
 use std::env;
 use std::fs;
 use std::process;
@@ -29,7 +31,6 @@ fn main() {
     println!("=== SOURCE ===");
     println!("{}", source);
 
-    // Tokenize
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.tokenize();
 
@@ -38,17 +39,26 @@ fn main() {
         println!("{}: {:?}", i, token);
     }
 
-    // Parse
     let mut parser = Parser::new(tokens);
-    match parser.parse() {
+    let program = match parser.parse() {
         Ok(program) => {
             println!("\n=== AST ===");
             println!("{:#?}", program);
+            program
         }
         Err(err) => {
             eprintln!("\n=== PARSE ERROR ===");
             eprintln!("{}", err.message);
             process::exit(1);
         }
+    };
+
+    let ssa_builder = SsaBuilder::new();
+    let ssa_program = ssa_builder.convert(program);
+
+    println!("\n=== SSA IR ===");
+    for (i, instr) in ssa_program.instructions.iter().enumerate() {
+        println!("{}: {}", i, instr);
     }
+    println!("return {}", ssa_program.return_value);
 }
