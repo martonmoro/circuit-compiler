@@ -1,9 +1,11 @@
 mod ast;
+mod circuit;
 mod lexer;
 mod parser;
 mod ssa;
 mod token;
 
+use circuit::CircuitBuilder;
 use lexer::Lexer;
 use parser::Parser;
 use ssa::SsaBuilder;
@@ -61,4 +63,12 @@ fn main() {
         println!("{}: {}", i, instr);
     }
     println!("return {}", ssa_program.return_value);
+
+    let circuit = CircuitBuilder::from_ssa(ssa_program);
+
+    println!("\n=== CIRCUIT ===");
+    for (i, gate) in circuit.gates.iter().enumerate() {
+        println!("{}: {}", i, gate);
+    }
+    println!("output: {}", circuit.output_wire);
 }
