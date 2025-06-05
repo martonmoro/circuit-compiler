@@ -71,7 +71,7 @@ impl ConstantFolder {
                     instr.clone()
                 }
             }
-            SsaInstruction::Assert(left, right) => instr.clone(),
+            SsaInstruction::Assert(_left, _right) => instr.clone(),
         }
     }
 }
