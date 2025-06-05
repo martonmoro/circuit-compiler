@@ -10,6 +10,7 @@ pub enum Stmt {
     ConstDecl { name: String, value: i32 },
     Let { name: String, expr: Expr },
     Return(Expr),
+    Assert { left: Expr, right: Expr },
 }
 
 #[derive(Debug, Clone)]

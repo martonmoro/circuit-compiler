@@ -15,6 +15,7 @@ pub enum WitnessError {
     MissingWireValue(String),
     NoPublicInputsProvided,
     NoPrivateInputsProvided,
+    AssertionFailed(i32, i32),
 }
 
 impl std::fmt::Display for WitnessError {
@@ -28,6 +29,9 @@ impl std::fmt::Display for WitnessError {
             }
             WitnessError::NoPrivateInputsProvided => {
                 write!(f, "Circuit requires private inputs but none provided")
+            }
+            WitnessError::AssertionFailed(left, right) => {
+                write!(f, "Assertion failed: {} != {}", left, right)
             }
         }
     }
@@ -99,7 +103,7 @@ impl WitnessCalculator {
             "witness": witness,
             "public_inputs": public_inputs,
             "private_inputs": private_inputs,
-            "result": result,
+            "output": result,
             "num_wires": witness.len()
         });
 
@@ -168,6 +172,26 @@ impl WitnessCalculator {
                     .ok_or_else(|| WitnessError::MissingWireValue(right.to_string()))?;
                 self.wire_values
                     .insert(output.clone(), left_val * right_val);
+                Ok(())
+            }
+            Gate::Assert {
+                output,
+                left,
+                right,
+            } => {
+                let left_val = self
+                    .get_wire_value(left)
+                    .ok_or_else(|| WitnessError::MissingWireValue(left.to_string()))?;
+                let right_val = self
+                    .get_wire_value(right)
+                    .ok_or_else(|| WitnessError::MissingWireValue(right.to_string()))?;
+
+                let diff = left_val - right_val;
+                if diff != 0 {
+                    return Err(WitnessError::AssertionFailed(left_val, right_val));
+                }
+
+                self.wire_values.insert(output.clone(), 0);
                 Ok(())
             }
         }

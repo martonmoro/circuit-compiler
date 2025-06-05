@@ -2,6 +2,7 @@
 pub enum TokenType {
     Let,
     Return,
+    Assert,
 
     Public,
     Private,
@@ -10,6 +11,7 @@ pub enum TokenType {
     Star,
     Plus,
     Equals,
+    EqualsEquals,
 
     Identifier(String),
     Number(i32),

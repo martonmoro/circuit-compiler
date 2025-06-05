@@ -1,0 +1,5 @@
+public x
+private secret
+let y = x * secret
+assert y == 50
+return y

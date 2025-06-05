@@ -73,7 +73,14 @@ impl Lexer {
         let token_type = match ch {
             '+' => TokenType::Plus,
             '*' => TokenType::Star,
-            '=' => TokenType::Equals,
+            '=' => {
+                if self.peek() == '=' {
+                    self.advance();
+                    TokenType::EqualsEquals
+                } else {
+                    TokenType::Equals
+                }
+            }
             '(' => TokenType::LeftParen,
             ')' => TokenType::RightParen,
             '0'..='9' => {
@@ -88,6 +95,7 @@ impl Lexer {
                 match ident.as_str() {
                     "let" => TokenType::Let,
                     "return" => TokenType::Return,
+                    "assert" => TokenType::Assert,
                     "public" => TokenType::Public,
                     "private" => TokenType::Private,
                     "const" => TokenType::Const,

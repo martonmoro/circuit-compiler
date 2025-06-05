@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
-
 use crate::ssa::{SsaInstruction, SsaProgram, SsaValue};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Wire {
@@ -25,6 +23,11 @@ pub enum Gate {
         left: Wire,
         right: Wire,
     },
+    Assert {
+        output: Wire,
+        left: Wire,
+        right: Wire,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +45,7 @@ pub struct CircuitBuilder {
     public_inputs: Vec<(String, Wire)>,
     private_inputs: Vec<(String, Wire)>,
 }
+
 impl CircuitBuilder {
     pub fn new() -> Self {
         Self {
@@ -137,6 +141,18 @@ impl CircuitBuilder {
                 self.gates.push(gate);
                 dest_wire
             }
+            SsaInstruction::Assert(left, right) => {
+                let left_wire = self.get_or_create_wire(left);
+                let right_wire = self.get_or_create_wire(right);
+                let zero_wire = self.new_wire();
+                let gate = Gate::Assert {
+                    output: zero_wire.clone(),
+                    left: left_wire,
+                    right: right_wire,
+                };
+                self.gates.push(gate);
+                zero_wire
+            }
         }
     }
 }
@@ -175,6 +191,11 @@ impl std::fmt::Display for Gate {
                 left,
                 right,
             } => write!(f, "{} = {} * {}", output, left, right),
+            Gate::Assert {
+                output,
+                left,
+                right,
+            } => write!(f, "{} = {} - {}", output, left, right),
         }
     }
 }

@@ -71,6 +71,7 @@ impl ConstantFolder {
                     instr.clone()
                 }
             }
+            SsaInstruction::Assert(left, right) => instr.clone(),
         }
     }
 }
@@ -100,14 +101,21 @@ impl DeadCodeEliminator {
         while changed {
             changed = false;
             for instr in &ssa_program.instructions {
-                let dest = Self::get_destination(instr);
                 let inputs = Self::get_inputs(instr);
 
-                // if any input to this instruction depends on circuit inputs,
-                // then this instruction's output also depends on circuit inputs
-                if inputs.iter().any(|input| input_dependent.contains(input)) {
-                    if input_dependent.insert(dest.clone()) {
-                        changed = true;
+                if let Some(dest) = Self::get_destination(instr) {
+                    // if any input to this instruction depends on circuit inputs,
+                    // then this instruction's output also depends on circuit inputs
+                    if inputs.iter().any(|input| input_dependent.contains(input)) {
+                        if input_dependent.insert(dest) {
+                            changed = true;
+                        }
+                    }
+                } else {
+                    for input in inputs {
+                        if input_dependent.insert(input) {
+                            changed = true;
+                        }
                     }
                 }
             }
@@ -123,8 +131,15 @@ impl DeadCodeEliminator {
         while changed {
             changed = false;
             for instr in &ssa_program.instructions {
-                let dest = Self::get_destination(instr);
-                if used_values.contains(&dest) {
+                if let Some(dest) = Self::get_destination(instr) {
+                    if used_values.contains(&dest) {
+                        for input in Self::get_inputs(instr) {
+                            if used_values.insert(input) {
+                                changed = true;
+                            }
+                        }
+                    }
+                } else {
                     for input in Self::get_inputs(instr) {
                         if used_values.insert(input) {
                             changed = true;
@@ -138,8 +153,11 @@ impl DeadCodeEliminator {
             .instructions
             .into_iter()
             .filter(|instr| {
-                let dest = Self::get_destination(instr);
-                used_values.contains(&dest)
+                if let Some(dest) = Self::get_destination(instr) {
+                    used_values.contains(&dest)
+                } else {
+                    true
+                }
             })
             .collect();
 
@@ -151,11 +169,12 @@ impl DeadCodeEliminator {
         }
     }
 
-    fn get_destination(instr: &SsaInstruction) -> SsaValue {
+    fn get_destination(instr: &SsaInstruction) -> Option<SsaValue> {
         match instr {
-            SsaInstruction::Const(dest, _) => dest.clone(),
-            SsaInstruction::Add(dest, _, _) => dest.clone(),
-            SsaInstruction::Mul(dest, _, _) => dest.clone(),
+            SsaInstruction::Const(dest, _) => Some(dest.clone()),
+            SsaInstruction::Add(dest, _, _) => Some(dest.clone()),
+            SsaInstruction::Mul(dest, _, _) => Some(dest.clone()),
+            SsaInstruction::Assert(_, _) => None,
         }
     }
 
@@ -164,6 +183,7 @@ impl DeadCodeEliminator {
             SsaInstruction::Const(_, _) => vec![],
             SsaInstruction::Add(_, left, right) => vec![left.clone(), right.clone()],
             SsaInstruction::Mul(_, left, right) => vec![left.clone(), right.clone()],
+            SsaInstruction::Assert(left, right) => vec![left.clone(), right.clone()],
         }
     }
 }

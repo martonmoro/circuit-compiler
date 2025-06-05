@@ -5,6 +5,7 @@ statement = "public" IDENT
           | "const" IDENT "=" NUMBER
           | "let" IDENT "=" expr
           | "return" expr
+          | "assert" expr "==" expr
 expr = term ("+" term | "*" term)*
 term = IDENT | NUMBER | "(" expr ")"
 */
@@ -48,6 +49,7 @@ impl Parser {
             TokenType::Const => self.parse_const_stmt(),
             TokenType::Let => self.parse_let_stmt(),
             TokenType::Return => self.parse_return_stmt(),
+            TokenType::Assert => self.parse_assert_stmt(),
             _ => Err(ParseError {
                 message: format!("Expected statement, found {:?}", self.peek()),
             }),
@@ -91,6 +93,15 @@ impl Parser {
         self.consume(TokenType::Return)?;
         let expr = self.parse_expr()?;
         Ok(Stmt::Return(expr))
+    }
+
+    // "assert" expr "==" expr
+    fn parse_assert_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenType::Assert)?;
+        let left = self.parse_expr()?;
+        self.consume(TokenType::EqualsEquals)?;
+        let right = self.parse_expr()?;
+        Ok(Stmt::Assert { left, right })
     }
 
     // expr = term ("+" term | "*" term)*

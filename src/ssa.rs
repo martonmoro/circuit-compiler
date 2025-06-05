@@ -15,6 +15,7 @@ pub enum SsaInstruction {
     Const(SsaValue, i32),              // destiantion, value
     Add(SsaValue, SsaValue, SsaValue), // destination, left, right
     Mul(SsaValue, SsaValue, SsaValue), // destination, left, right
+    Assert(SsaValue, SsaValue),        // left, right (left == right)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -97,9 +98,19 @@ impl SsaBuilder {
                             SsaInstruction::Mul(_, left, right) => {
                                 SsaInstruction::Mul(var_ssa, left, right)
                             }
+                            SsaInstruction::Assert(left, right) => {
+                                self.instructions.push(SsaInstruction::Assert(left, right));
+                                continue;
+                            }
                         };
                         self.instructions.push(new_instr);
                     }
+                }
+                Stmt::Assert { left, right } => {
+                    let left_val = self.convert_expr(left);
+                    let right_val = self.convert_expr(right);
+                    self.instructions
+                        .push(SsaInstruction::Assert(left_val, right_val));
                 }
                 Stmt::Return(expr) => {
                     return_value = Some(self.convert_expr(expr));
@@ -161,10 +172,10 @@ impl SsaBuilder {
     }
 
     fn new_temp(&mut self) -> SsaValue {
-        let temp_name = format!("t{}", self.temp_counter); // "t0", "t1", "t2"
+        let temp_name = format!("t{}", self.temp_counter);
         let new_temp = SsaValue {
             name: temp_name,
-            version: 0, // All temps get version 0
+            version: 0,
         };
         self.temp_counter += 1;
         new_temp
@@ -183,6 +194,7 @@ impl std::fmt::Display for SsaInstruction {
             SsaInstruction::Const(dest, value) => write!(f, "{} = {}", dest, value),
             SsaInstruction::Add(dest, left, right) => write!(f, "{} = {} + {}", dest, left, right),
             SsaInstruction::Mul(dest, left, right) => write!(f, "{} = {} * {}", dest, left, right),
+            SsaInstruction::Assert(left, right) => write!(f, "assert {} == {}", left, right),
         }
     }
 }
