@@ -119,6 +119,13 @@ fn main() {
         }
     }
 
+    let r1cs = circuit_after.to_r1cs();
+    let r1cs_filename = format!("circuit/{}.r1cs", base_name);
+    match r1cs.save_to_file(&r1cs_filename) {
+        Ok(()) => println!("Saved R1CS to {}", r1cs_filename),
+        Err(err) => eprintln!("Error saving R1CS: {}", err),
+    }
+
     if let Some(inputs_file) = inputs_filename {
         println!("\n=== CALCULATING WITNESS ===");
 

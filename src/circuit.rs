@@ -38,6 +38,31 @@ pub struct Circuit {
     pub output_wire: Wire,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct R1csConstraint {
+    pub a: Vec<i32>,
+    pub b: Vec<i32>,
+    pub c: Vec<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct R1csSystem {
+    pub num_constraints: usize,
+    pub num_variables: usize,
+    pub constraints: Vec<R1csConstraint>,
+    pub public_inputs: Vec<(String, usize)>,
+    pub private_inputs: Vec<(String, usize)>,
+    pub output_wire: usize,
+}
+
+impl R1csSystem {
+    pub fn save_to_file(&self, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let json = serde_json::to_string_pretty(self)?;
+        std::fs::write(filename, json)?;
+        Ok(())
+    }
+}
+
 pub struct CircuitBuilder {
     gates: Vec<Gate>,
     wire_counter: usize,
@@ -164,10 +189,122 @@ impl Circuit {
         Ok(())
     }
 
-    pub fn load_from_file(filename: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let json = std::fs::read_to_string(filename)?;
-        let circuit = serde_json::from_str(&json)?;
-        Ok(circuit)
+    pub fn to_r1cs(&self) -> R1csSystem {
+        // get max wire id + 1
+        let num_wires = self
+            .gates
+            .iter()
+            .flat_map(|gate| match gate {
+                Gate::Const { output, .. } => vec![output.id],
+                Gate::Add {
+                    output,
+                    left,
+                    right,
+                } => vec![output.id, left.id, right.id],
+                Gate::Mul {
+                    output,
+                    left,
+                    right,
+                } => vec![output.id, left.id, right.id],
+                Gate::Assert {
+                    output,
+                    left,
+                    right,
+                } => vec![output.id, left.id, right.id],
+            })
+            .chain(self.public_inputs.iter().map(|(_, wire)| wire.id))
+            .chain(self.private_inputs.iter().map(|(_, wire)| wire.id))
+            .chain(std::iter::once(self.output_wire.id))
+            .max()
+            .unwrap_or(0)
+            + 1;
+
+        let mut constraints = Vec::new();
+
+        for gate in &self.gates {
+            let constraint = match gate {
+                Gate::Const { output, value } => {
+                    // 0 * value = output
+                    let mut a = vec![0; num_wires];
+                    let mut b = vec![0; num_wires];
+                    let mut c = vec![0; num_wires];
+
+                    a[0] = 1;
+                    b[0] = *value; // Constant term
+                    c[output.id] = 1;
+
+                    R1csConstraint { a, b, c }
+                }
+                Gate::Mul {
+                    output,
+                    left,
+                    right,
+                } => {
+                    // left * right = output
+                    let mut a = vec![0; num_wires];
+                    let mut b = vec![0; num_wires];
+                    let mut c = vec![0; num_wires];
+
+                    a[left.id] = 1;
+                    b[right.id] = 1;
+                    c[output.id] = 1;
+
+                    R1csConstraint { a, b, c }
+                }
+                Gate::Add {
+                    output,
+                    left,
+                    right,
+                } => {
+                    // (left + right) * 1 = output
+                    let mut a = vec![0; num_wires];
+                    let mut b = vec![0; num_wires];
+                    let mut c = vec![0; num_wires];
+
+                    a[left.id] = 1;
+                    a[right.id] = 1;
+                    b[0] = 1; // multiply by 1
+                    c[output.id] = 1;
+
+                    R1csConstraint { a, b, c }
+                }
+                Gate::Assert {
+                    output,
+                    left,
+                    right,
+                } => {
+                    // (left - right) * 1 = output (should be 0)
+                    let mut a = vec![0; num_wires];
+                    let mut b = vec![0; num_wires];
+                    let mut c = vec![0; num_wires];
+
+                    a[left.id] = 1;
+                    a[right.id] = -1;
+                    b[0] = 1; // multiply by 1
+                    c[output.id] = 1;
+
+                    R1csConstraint { a, b, c }
+                }
+            };
+            constraints.push(constraint);
+        }
+
+        R1csSystem {
+            num_constraints: constraints.len(),
+            num_variables: num_wires,
+            constraints,
+            public_inputs: self
+                .public_inputs
+                .iter()
+                .map(|(name, wire)| (name.clone(), wire.id))
+                .collect(),
+            private_inputs: self
+                .private_inputs
+                .iter()
+                .map(|(name, wire)| (name.clone(), wire.id))
+                .collect(),
+            output_wire: self.output_wire.id,
+        }
     }
 }
 
