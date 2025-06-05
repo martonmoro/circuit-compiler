@@ -15,16 +15,13 @@ A zero-knowledge circuit compiler that transforms high-level programs into arith
 ```
 
 program = statement*
-
 statement = "public" IDENT
-| "private" IDENT
-| "const" IDENT "=" NUMBER
-| "let" IDENT "=" expr
-| "assert" expr "==" expr
-| "return" expr
-
-expr = term ("+" term | "_" term)_
-
+          | "private" IDENT
+          | "const" IDENT "=" NUMBER
+          | "let" IDENT "=" expr
+          | "return" expr
+          | "assert" expr "==" expr
+expr = term ("+" term | "*" term)*
 term = IDENT | NUMBER | "(" expr ")"
 
 ```
