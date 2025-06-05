@@ -63,4 +63,4 @@ Uses `i32` arithmetic for simplicity. Production ZK requires finite field arithm
 
 ## Examples
 
-Check `examples/` for test programs showing language features and optimizations. The current examples files end with `.zk`, the `.mc` files were used for early testing.
+Check `examples/` for test programs showing language features and optimizations. The current example files end with `.zk`, the files ending in `.mc` were used for early testing.
