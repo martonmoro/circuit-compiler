@@ -1,0 +1,6 @@
+public x
+const a = 5
+const b = 10
+let c = a + b
+let result = c * x
+return result

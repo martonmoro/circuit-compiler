@@ -1,0 +1,6 @@
+[public]
+a = 2
+b = 3
+
+[private]
+secret = 8

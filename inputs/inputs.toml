@@ -1,0 +1,5 @@
+[public]
+x = 5
+
+[private]
+secret = 10

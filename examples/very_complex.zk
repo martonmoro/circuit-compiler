@@ -1,0 +1,16 @@
+public a
+public b
+private secret
+let x = 3
+let y = 7
+let z = x + y
+let unused1 = 42
+let unused2 = unused1 * 2
+let temp1 = a + b
+let temp2 = temp1 * z
+let temp3 = secret + x
+let temp4 = temp3 * y
+let final1 = temp2 + temp4
+let constant_chain = 5 + 10 + 15
+let result = final1 + constant_chain
+return result

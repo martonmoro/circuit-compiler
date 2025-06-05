@@ -1,0 +1,6 @@
+public a
+public b
+let x = a + b
+let y = x * a
+let z = y + b
+return z

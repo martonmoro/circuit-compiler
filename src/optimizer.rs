@@ -24,8 +24,8 @@ impl ConstantFolder {
         SsaProgram {
             instructions: optimized_instructions,
             return_value: ssa_program.return_value,
-            public_inputs: ssa_program.public_inputs, // pass through
-            private_inputs: ssa_program.private_inputs, // pass through
+            public_inputs: ssa_program.public_inputs,
+            private_inputs: ssa_program.private_inputs,
         }
     }
 }
@@ -71,6 +71,99 @@ impl ConstantFolder {
                     instr.clone()
                 }
             }
+        }
+    }
+}
+
+pub struct DeadCodeEliminator;
+
+impl DeadCodeEliminator {
+    pub fn eliminate(ssa_program: SsaProgram) -> SsaProgram {
+        let mut used_values = std::collections::HashSet::new();
+        let mut input_dependent = std::collections::HashSet::new();
+
+        // all inputs are used and input-dependent
+        for input in &ssa_program.public_inputs {
+            used_values.insert(input.clone());
+            input_dependent.insert(input.clone());
+        }
+        for input in &ssa_program.private_inputs {
+            used_values.insert(input.clone());
+            input_dependent.insert(input.clone());
+        }
+
+        // return value is always used
+        used_values.insert(ssa_program.return_value.clone());
+
+        // all values that transitively depend on inputs
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for instr in &ssa_program.instructions {
+                let dest = Self::get_destination(instr);
+                let inputs = Self::get_inputs(instr);
+
+                // if any input to this instruction depends on circuit inputs,
+                // then this instruction's output also depends on circuit inputs
+                if inputs.iter().any(|input| input_dependent.contains(input)) {
+                    if input_dependent.insert(dest.clone()) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        // all input-dependent values are used
+        for value in &input_dependent {
+            used_values.insert(value.clone());
+        }
+
+        // backwards reachability from used values
+        changed = true;
+        while changed {
+            changed = false;
+            for instr in &ssa_program.instructions {
+                let dest = Self::get_destination(instr);
+                if used_values.contains(&dest) {
+                    for input in Self::get_inputs(instr) {
+                        if used_values.insert(input) {
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let filtered_instructions: Vec<_> = ssa_program
+            .instructions
+            .into_iter()
+            .filter(|instr| {
+                let dest = Self::get_destination(instr);
+                used_values.contains(&dest)
+            })
+            .collect();
+
+        SsaProgram {
+            instructions: filtered_instructions,
+            return_value: ssa_program.return_value,
+            public_inputs: ssa_program.public_inputs,
+            private_inputs: ssa_program.private_inputs,
+        }
+    }
+
+    fn get_destination(instr: &SsaInstruction) -> SsaValue {
+        match instr {
+            SsaInstruction::Const(dest, _) => dest.clone(),
+            SsaInstruction::Add(dest, _, _) => dest.clone(),
+            SsaInstruction::Mul(dest, _, _) => dest.clone(),
+        }
+    }
+
+    fn get_inputs(instr: &SsaInstruction) -> Vec<SsaValue> {
+        match instr {
+            SsaInstruction::Const(_, _) => vec![],
+            SsaInstruction::Add(_, left, right) => vec![left.clone(), right.clone()],
+            SsaInstruction::Mul(_, left, right) => vec![left.clone(), right.clone()],
         }
     }
 }
