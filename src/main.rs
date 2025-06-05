@@ -99,4 +99,18 @@ fn main() {
     println!("\n=== OPTIMIZATION IMPACT ===");
     println!("Gates before: {}", circuit_before.gates.len());
     println!("Gates after: {}", circuit_after.gates.len());
+
+    std::fs::create_dir_all("circuit").unwrap_or(()); // Create target dir if it doesn't exist
+
+    let base_name = std::path::Path::new(filename)
+        .file_stem()
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let output_filename = format!("circuit/{}.json", base_name);
+
+    match circuit_after.save_to_file(&output_filename) {
+        Ok(()) => println!("\nSaved circuit to {}", output_filename),
+        Err(err) => eprintln!("Error saving: {}", err),
+    }
 }

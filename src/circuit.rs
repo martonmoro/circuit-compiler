@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::ssa::{SsaInstruction, SsaProgram, SsaValue};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Wire {
     pub id: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Gate {
     Const {
         output: Wire,
@@ -25,7 +27,7 @@ pub enum Gate {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Circuit {
     pub public_inputs: Vec<(String, Wire)>,
     pub private_inputs: Vec<(String, Wire)>,
@@ -136,6 +138,20 @@ impl CircuitBuilder {
                 dest_wire
             }
         }
+    }
+}
+
+impl Circuit {
+    pub fn save_to_file(&self, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let json = serde_json::to_string_pretty(self)?;
+        std::fs::write(filename, json)?;
+        Ok(())
+    }
+
+    pub fn load_from_file(filename: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let json = std::fs::read_to_string(filename)?;
+        let circuit = serde_json::from_str(&json)?;
+        Ok(circuit)
     }
 }
 
